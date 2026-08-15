@@ -10,6 +10,7 @@ const Track = require("../models/Track")
 const { isValidObjectId } = require("mongoose")
 const crypto = require("crypto")
 const nodemailer = require("nodemailer")
+const { default: axios } = require("axios")
 
 const BASE_DIR = path.join(process.cwd(), "uploads", "twemoji")
 
@@ -688,24 +689,48 @@ const registerUser = async (req, res) => {
         .update(otp)
         .digest("hex")
 
-    const transporter = nodemailer.createTransport({
-        host: process.env.BREVO_HOST,
-        port: process.env.BREVO_PORT,
-        secure: false,
-        auth: {
-            user: process.env.BREVO_USER,
-            pass: process.env.BREVO_PASS
-        }
-    })
+    // const transporter = nodemailer.createTransport({
+    //     host: process.env.BREVO_HOST,
+    //     port: process.env.BREVO_PORT,
+    //     secure: false,
+    //     auth: {
+    //         user: process.env.BREVO_USER,
+    //         pass: process.env.BREVO_PASS
+    //     }
+    // })
 
     try {
-        await transporter.sendMail({
-            from: '"Track Pixels" <support@trackpixels.online>',
-            to: _email,
-            subject: "Verify your email address",
-            text: `Your verification code is ${otp}`,
-            html: verificationTemplate(otp)
-        })
+        // await transporter.sendMail({
+        //     from: '"Track Pixels" <support@trackpixels.online>',
+        //     to: _email,
+        //     subject: "Verify your email address",
+        //     text: `Your verification code is ${otp}`,
+        //     html: verificationTemplate(otp)
+        // })
+        await axios.post(
+            "https://api.brevo.com/v3/smtp/email",
+            {
+                sender: {
+                    name: "Track Pixels",
+                    email: "support@trackpixels.online"
+                },
+                to: [
+                    {
+                        email: _email
+                    }
+                ],
+                subject: "Verify your email address",
+                textContent: `Your verification code is ${otp}`,
+                htmlContent: verificationTemplate(otp)
+            },
+            {
+                headers: {
+                    "api-key": process.env.BREVO_API_KEY,
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                }
+            }
+        )
     } catch (err) {
         console.log("[-] Failed to send e-mail", _email, err)
 
